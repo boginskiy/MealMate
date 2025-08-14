@@ -1,6 +1,7 @@
 package model
 
 type Fooder interface {
+	GetAttrs() []string
 }
 
 type Ingredient struct {
@@ -24,3 +25,7 @@ type Food struct {
 func NewFood() *Food {
 	return &Food{}
 }
+
+// func (f *Food) GetAttrs() []string {
+
+// }

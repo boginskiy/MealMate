@@ -10,6 +10,7 @@ import (
 type DBFooder interface {
 	PutFood(*m.Food) warning
 	TakeFood(string) (*m.Food, warning)
+	TakeFoodStore() map[string]*m.Food
 }
 
 type DB struct {
@@ -22,6 +23,10 @@ func NewDB() *DB {
 	return &DB{
 		FoodStore: make(map[string]*m.Food, 5),
 	}
+}
+
+func (d *DB) TakeFoodStore() map[string]*m.Food {
+	return d.FoodStore
 }
 
 func (d *DB) PutFood(f *m.Food) warning {
