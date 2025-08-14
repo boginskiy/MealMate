@@ -26,8 +26,8 @@ func (f *FoodServ) CreateFood(req *http.Request) ([]byte, int) {
 
 	// Check error
 	if err != nil {
-		tmpErr := m.NewErrorWarn(http.StatusBadRequest, err.Error(), req.URL.Path)
-		return tmpErr.PreparBody(req, "error"), http.StatusBadRequest
+		tmpErr := m.NewErrorWarn("error", http.StatusBadRequest, err.Error(), req.URL.Path)
+		return tmpErr.PreparBody(req), http.StatusBadRequest
 	}
 
 	// Deserialization
@@ -35,15 +35,15 @@ func (f *FoodServ) CreateFood(req *http.Request) ([]byte, int) {
 	err = json.Unmarshal(tmpByte, newFood)
 
 	if err != nil {
-		tmpErr := m.NewErrorWarn(http.StatusBadRequest, err.Error(), req.URL.Path)
-		return tmpErr.PreparBody(req, "error"), http.StatusBadRequest
+		tmpErr := m.NewErrorWarn("error", http.StatusBadRequest, err.Error(), req.URL.Path)
+		return tmpErr.PreparBody(req), http.StatusBadRequest
 	}
 
 	// Write in DB
 	war := f.db.PutFood(newFood)
 	if war != "" {
-		tmpWar := m.NewErrorWarn(http.StatusBadRequest, string(war), req.URL.Path)
-		return tmpWar.PreparBody(req, "warning"), http.StatusUnprocessableEntity
+		tmpWar := m.NewErrorWarn("warning", http.StatusUnprocessableEntity, string(war), req.URL.Path)
+		return tmpWar.PreparBody(req), http.StatusUnprocessableEntity
 	}
 
 	return tmpByte, http.StatusOK

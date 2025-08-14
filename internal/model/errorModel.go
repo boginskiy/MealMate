@@ -15,14 +15,16 @@ type Errorer interface {
 }
 
 type ErrorWarn struct {
+	Alert     string
 	Code      int
 	Message   string
 	Path      string
 	Timestamp time.Time
 }
 
-func NewErrorWarn(code int, mess string, path string) *ErrorWarn {
+func NewErrorWarn(alert string, code int, mess string, path string) *ErrorWarn {
 	return &ErrorWarn{
+		Alert:     alert,
 		Code:      code,
 		Message:   mess,
 		Path:      path,
@@ -39,12 +41,12 @@ func (e *ErrorWarn) ToMarshal() ([]byte, error) {
 	return json.Marshal(e)
 }
 
-func (e *ErrorWarn) PreparBody(req *http.Request, tpy string) []byte {
+func (e *ErrorWarn) PreparBody(req *http.Request) []byte {
 	tmpBody, err := e.ToMarshal()
 
 	if err != nil {
 		// Если не удалось сериализовать Error, пишем os.Stdout и короткое сообщение
-		tmpStr := fmt.Sprintf(`{"%v message":"%v"}`, tpy, err)
+		tmpStr := fmt.Sprintf(`{"%v message":"%v"}`, e.Alert, err)
 		fmt.Fprintf(os.Stdout, "%v\n", tmpStr)
 		tmpBody = []byte(tmpStr)
 	}
