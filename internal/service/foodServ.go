@@ -9,23 +9,20 @@ import (
 	"net/http"
 )
 
-type FoodServer interface {
-	CreateFood(*http.Request) ([]byte, int)
-	ReadFood(*http.Request) ([]byte, int)
-}
+const ID = "Name"
 
 type FoodServ struct {
-	toolsStructer pkg.ToolsStructer
-	dBer          db.DBFooder
-	exFuncer      ExFuncer
+	exReflecter pkg.ExReflecter
+	dBer        db.DBFooder
+	exFuncer    ExFuncer
 }
 
-func NewFoodServ(toolsS pkg.ToolsStructer, db db.DBFooder) *FoodServ {
-	exFunc := NewExtraFunc()
-	return &FoodServ{toolsStructer: toolsS, dBer: db, exFuncer: exFunc}
+func NewFoodServ(exref pkg.ExReflecter, db db.DBFooder) *FoodServ {
+	exfunc := NewExtraFunc()
+	return &FoodServ{exReflecter: exref, dBer: db, exFuncer: exfunc}
 }
 
-func (f *FoodServ) CreateFood(req *http.Request) ([]byte, int) {
+func (f *FoodServ) Create(req *http.Request) ([]byte, int) {
 	// Read Body
 	tmpByte, err := io.ReadAll(req.Body)
 
@@ -70,7 +67,7 @@ Params:
 	default - view all food
 	todo    - set up pagination
 */
-func (f *FoodServ) ReadFood(req *http.Request) ([]byte, int) {
+func (f *FoodServ) Read(req *http.Request) ([]byte, int) {
 	tmpStore := make([]m.Food, 0, 10) // tmpStore
 	queryParams := req.URL.Query()    // Params of URL
 
@@ -89,4 +86,52 @@ func (f *FoodServ) ReadFood(req *http.Request) ([]byte, int) {
 	}
 
 	return tmpByte, http.StatusOK
+}
+
+func (f *FoodServ) Update(req *http.Request) ([]byte, int) {
+	// Read Body
+	tmpByte, err := io.ReadAll(req.Body)
+
+	// Check error
+	if err != nil {
+		tmpErr := m.NewErrorWarn("error", http.StatusBadRequest, err.Error(), req.URL.Path)
+		return tmpErr.PreparBody(req), http.StatusBadRequest
+	}
+
+	// Deserialization to map
+	var forUpFood map[string]any
+	err = json.Unmarshal(tmpByte, &forUpFood)
+
+	if err != nil {
+		tmpErr := m.NewErrorWarn("error", http.StatusBadRequest, err.Error(), req.URL.Path)
+		return tmpErr.PreparBody(req), http.StatusBadRequest
+	}
+
+	// Check that is ID, like 'Name'
+	tmpId, ok := forUpFood[ID]
+	id, ok2 := tmpId.(string)
+
+	if !ok || !ok2 {
+		tmpErr := m.NewErrorWarn("error", http.StatusBadRequest, badBodyErr.Error(), req.URL.Path)
+		return tmpErr.PreparBody(req), http.StatusBadRequest
+	}
+
+	newFood, war := f.dBer.ChangeFood(id, forUpFood)
+	if war != "" {
+		tmpWar := m.NewErrorWarn("warning", http.StatusBadRequest, string(war), req.URL.Path)
+		return tmpWar.PreparBody(req), http.StatusBadRequest
+	}
+
+	// Serialization
+	tmpByte2, err := json.Marshal(newFood)
+	if err != nil {
+		tmpErr := m.NewErrorWarn("error", http.StatusBadRequest, err.Error(), req.URL.Path)
+		return tmpErr.PreparBody(req), http.StatusBadRequest
+	}
+
+	return tmpByte2, http.StatusOK
+}
+
+func (f *FoodServ) Delete(req *http.Request) ([]byte, int) {
+	return []byte{}, 0
 }

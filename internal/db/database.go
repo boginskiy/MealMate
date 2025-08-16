@@ -2,27 +2,41 @@ package db
 
 import (
 	m "mealmate/internal/model"
+	"mealmate/pkg"
 	"strings"
 	"sync"
 )
 
 // Interface
 type DBFooder interface {
-	PutFood(*m.Food) warning
-	TakeFood(string) (*m.Food, warning)
+	ChangeFood(string, map[string]any) (m.Food, warning)
+	TakeFood(string) (m.Food, warning)
 	TakeFoodStore() map[string]*m.Food
+	PutFood(*m.Food) warning
 }
 
 type DB struct {
-	FoodStore map[string]*m.Food
-	muR       sync.RWMutex
-	mu        sync.Mutex
+	FoodStore   map[string]*m.Food
+	exReflecter pkg.ExReflecter
+	muR         sync.RWMutex
+	mu          sync.Mutex
 }
 
-func NewDB() *DB {
+func NewDB(exref pkg.ExReflecter) *DB {
 	return &DB{
-		FoodStore: make(map[string]*m.Food, 5),
+		FoodStore:   make(map[string]*m.Food, 5),
+		exReflecter: exref,
 	}
+}
+
+func (d *DB) checkForUnic(id string) bool {
+	d.muR.RLock()
+	defer d.muR.RUnlock()
+
+	if _, ok := d.FoodStore[id]; ok {
+		return false
+	}
+	return true
 }
 
 func (d *DB) TakeFoodStore() map[string]*m.Food {
@@ -31,15 +45,13 @@ func (d *DB) TakeFoodStore() map[string]*m.Food {
 
 func (d *DB) PutFood(f *m.Food) warning {
 	// Формируем ключ Food
-	key := strings.TrimSpace(f.Name) + " " + strings.TrimSpace(f.Type)
+	key := strings.TrimSpace(f.Name)
 
-	// Считываем Map по ключу. Проверка, что записывемый Food будет уникальным.
-	d.muR.RLock()
-	if _, ok := d.FoodStore[key]; ok {
-		d.muR.RUnlock()
+	// Check for inic
+	isUnic := d.checkForUnic(key)
+	if !isUnic {
 		return unicFoodWarn
 	}
-	d.muR.RUnlock()
 
 	// Делаем новую запись с Food
 	d.mu.Lock()
@@ -48,6 +60,25 @@ func (d *DB) PutFood(f *m.Food) warning {
 	return ""
 }
 
-func (d *DB) TakeFood(key string) (*m.Food, warning) {
-	return nil, ""
+func (d *DB) TakeFood(id string) (m.Food, warning) {
+	d.muR.RLock()
+	defer d.muR.RUnlock()
+
+	takingFood, ok := d.FoodStore[id]
+	if !ok {
+		return m.Food{}, notFoundFoodWarn
+	}
+	return *takingFood, ""
+}
+
+func (d *DB) ChangeFood(id string, forUpData map[string]any) (m.Food, warning) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	takingFood, ok := d.FoodStore[id]
+	if !ok {
+		return m.Food{}, notFoundFoodWarn
+	}
+	takingFood = d.exReflecter.CrossUpdateStructs(takingFood, forUpData).(*m.Food)
+	return *takingFood, ""
 }

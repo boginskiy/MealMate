@@ -13,17 +13,17 @@ func Router() *chi.Mux {
 	r := chi.NewRouter()
 
 	// Handler for Food
-	toolsOfStruct := pkg.NewToolsOfStruct()
-	dB := db.NewDB()
+	exReflect := pkg.NewExtraReflect()
+	db := db.NewDB(exReflect)
 
-	foodS := s.NewFoodServ(toolsOfStruct, dB)
+	foodS := s.NewFoodServ(exReflect, db)
 	foodH := h.NewFoodHandler(foodS)
 
 	r.Route("/", func(r chi.Router) {
 
 		r.Route("/food/", func(r chi.Router) {
 			// r.Delete("/", food.Delete)
-			// r.Patch("/", food.Update)
+			r.Patch("/", foodH.Update)
 			r.Post("/", foodH.Create)
 			r.Get("/", foodH.Read)
 

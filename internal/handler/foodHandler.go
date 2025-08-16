@@ -9,15 +9,15 @@ import (
 )
 
 type FoodHandler struct {
-	foodServer s.FoodServer
+	servicer s.Servicer
 }
 
-func NewFoodHandler(f s.FoodServer) *FoodHandler {
-	return &FoodHandler{foodServer: f}
+func NewFoodHandler(s s.Servicer) *FoodHandler {
+	return &FoodHandler{servicer: s}
 }
 
 func (f *FoodHandler) Create(res http.ResponseWriter, req *http.Request) {
-	body, status := f.foodServer.CreateFood(req)
+	body, status := f.servicer.Create(req)
 	// Response
 	res.Header().Set("Content-Type", "application/json")
 	res.WriteHeader(status)
@@ -25,7 +25,15 @@ func (f *FoodHandler) Create(res http.ResponseWriter, req *http.Request) {
 }
 
 func (f *FoodHandler) Read(res http.ResponseWriter, req *http.Request) {
-	body, status := f.foodServer.ReadFood(req)
+	body, status := f.servicer.Read(req)
+	// Response
+	res.Header().Set("Content-Type", "application/json")
+	res.WriteHeader(status)
+	res.Write(body)
+}
+
+func (f *FoodHandler) Update(res http.ResponseWriter, req *http.Request) {
+	body, status := f.servicer.Update(req)
 	// Response
 	res.Header().Set("Content-Type", "application/json")
 	res.WriteHeader(status)
