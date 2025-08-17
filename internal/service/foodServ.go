@@ -148,5 +148,42 @@ func (f *FoodServ) Update(req *http.Request) ([]byte, int) {
 }
 
 func (f *FoodServ) Delete(req *http.Request) ([]byte, int) {
-	return []byte{}, 0
+	// Пробуем достать ID == Name
+	nameFood := f.exFuncer.TakeIDFromPath(req, ID)
+
+	// Пробуем достать ID из Body
+	if nameFood == "" {
+		body, err := f.exFuncer.ReadRequestBody(req)
+		if err != nil {
+			return f.handleAlert(req, err, http.StatusBadRequest)
+		}
+
+		var foodForDelete map[string]any
+		err = f.exEncoder.Deserialization(body, &foodForDelete)
+		if err != nil {
+			return f.handleAlert(req, err, http.StatusBadRequest)
+		}
+
+		// Check that is ID, like 'Name'
+		nameFood, err = f.getFoodID(foodForDelete)
+		if err != nil {
+			return f.handleAlert(req, err, http.StatusBadRequest)
+		}
+	}
+
+	// Delete Food into db
+	deletedFood, warn := f.dBer.DeleteFood(nameFood)
+	if warn != nil {
+		return f.handleAlert(req, warn, http.StatusBadRequest)
+	}
+
+	// Serialization
+	tmpByte, err := f.exEncoder.Serialization(deletedFood)
+	if err != nil {
+		f.handleAlert(req, err, http.StatusBadRequest)
+	}
+	return tmpByte, http.StatusOK
 }
+
+// Рефачим, проверяем, add Args
+// Тесты надо

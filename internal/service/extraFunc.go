@@ -14,6 +14,7 @@ import (
 
 type ExFuncer interface {
 	ReadRequestBody(*http.Request) ([]byte, error)
+	TakeIDFromPath(*http.Request, string) string
 	NeedShow(m.Fooder, url.Values) bool
 }
 
@@ -24,7 +25,7 @@ func NewExtraFunc() *ExtraFunc {
 	return &ExtraFunc{}
 }
 
-func (ex *ExtraFunc) QueryParamsGoToLower(params url.Values) url.Values {
+func (ex *ExtraFunc) queryParamsGoToLower(params url.Values) url.Values {
 	max := len(params)
 	for key, value := range params {
 		params[strings.ToLower(key)] = value
@@ -38,7 +39,7 @@ func (ex *ExtraFunc) QueryParamsGoToLower(params url.Values) url.Values {
 
 func (ex *ExtraFunc) NeedShow(food m.Fooder, queryParams url.Values) bool {
 	// Go to lower key for good compare continue ...
-	queryParams = ex.QueryParamsGoToLower(queryParams)
+	queryParams = ex.queryParamsGoToLower(queryParams)
 
 	// Get fields of struct of interface of Fooder
 	_value := reflect.ValueOf(food)
@@ -107,4 +108,17 @@ func (ex *ExtraFunc) ReadRequestBody(req *http.Request) ([]byte, error) {
 		return nil, err
 	}
 	return body, nil
+}
+
+func (ex *ExtraFunc) TakeIDFromPath(req *http.Request, id string) string {
+	queryParams := req.URL.Query()
+	// Go to lower key for good compare continue ...
+	queryParams = ex.queryParamsGoToLower(queryParams)
+
+	name := queryParams.Get(strings.ToLower(id))
+	if name == "" {
+		fmt.Fprintf(os.Stdout, "%v\n", notIdFromPathInfo)
+		return ""
+	}
+	return name
 }

@@ -17,3 +17,6 @@ var notValidIdErr = errors.New("invalid ID format")
 
 // Warnings:
 var Warn = warnings.New("")
+
+// Info:
+var notIdFromPathInfo = "[INFO]: the 'id' is not in url path"

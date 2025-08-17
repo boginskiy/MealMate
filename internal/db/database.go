@@ -11,6 +11,7 @@ import (
 // Interface
 type DBFooder interface {
 	UpdateFood(string, map[string]any) (m.Food, w.Warning)
+	DeleteFood(string) (m.Food, w.Warning)
 	TakeFood(string) (m.Food, w.Warning)
 	TakeFoodStore() map[string]*m.Food
 	PutFood(*m.Food) w.Warning
@@ -82,4 +83,15 @@ func (d *DB) UpdateFood(id string, forUpData map[string]any) (m.Food, w.Warning)
 	}
 	takingFood = d.exReflecter.CrossUpdateStructs(takingFood, forUpData).(*m.Food)
 	return *takingFood, nil
+}
+
+func (d *DB) DeleteFood(id string) (m.Food, w.Warning) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	if deletingFood, ok := d.FoodStore[id]; ok {
+		delete(d.FoodStore, id)
+		return *deletingFood, nil
+	}
+	return m.Food{}, notFoundFoodWarn
 }
