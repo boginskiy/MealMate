@@ -1,10 +1,10 @@
 package service
 
 import (
-	"encoding/json"
-	"io"
+	"fmt"
 	"mealmate/internal/db"
 	m "mealmate/internal/model"
+	w "mealmate/internal/warnings"
 	"mealmate/pkg"
 	"net/http"
 )
@@ -27,52 +27,72 @@ func NewFoodServ(exref pkg.ExReflecter, exencd pkg.ExEncoder, db db.DBFooder) *F
 		dBer:        db}
 }
 
-func (f *FoodServ) sendAlert(req *http.Request, kind, descrip string, status int) ([]byte, int) {
-	tmpAl := m.NewAlert(kind, status, descrip, req.URL.Path)
-	body := tmpAl.PreparBody(req)
-	return body, status
+func (f *FoodServ) handleAlert(req *http.Request, msg any, statusCode int) ([]byte, int) {
+	var message string
+	var kind string
+
+	switch v := msg.(type) {
+	case error:
+		message = v.Error()
+		kind = "error"
+	case w.Warning:
+		message = v.Warning()
+		kind = "warning"
+	default:
+		message = fmt.Sprintf("%v\n", msg)
+		kind = "unknown"
+	}
+
+	alert := m.NewAlert(kind, statusCode, message, req.URL.Path)
+	body := alert.PreparBody(req)
+	return body, statusCode
+}
+
+func (f *FoodServ) getFoodID(deserializedFood map[string]any) (string, error) {
+	tmpId, ok := deserializedFood[ID]
+	if !ok {
+		return "", notIdFieldErr
+	}
+	id, ok := tmpId.(string)
+	if !ok {
+		return "", notValidIdErr
+	}
+	return id, nil
 }
 
 func (f *FoodServ) Create(req *http.Request) ([]byte, int) {
 	// Read Body
-	tmpByte, err := io.ReadAll(req.Body)
-
+	body, err := f.exFuncer.ReadRequestBody(req)
 	if err != nil {
-		return f.sendAlert(req, "error", err.Error(), http.StatusBadRequest)
+		return f.handleAlert(req, err, http.StatusBadRequest)
 	}
 
 	// Deserialization
 	newFood := m.NewFood()
-	err = f.exEncoder.Deserialization(tmpByte, tmpByte)
-
+	err = f.exEncoder.Deserialization(body, newFood)
 	if err != nil {
-		return f.sendAlert(req, "error", err.Error(), http.StatusBadRequest)
+		return f.handleAlert(req, err, http.StatusBadRequest)
 	}
 
 	// Write in DB
-	war := f.dBer.PutFood(newFood)
-	if war != "" {
-		return f.sendAlert(req, "warning", string(war), http.StatusUnprocessableEntity)
+	warn := f.dBer.PutFood(newFood)
+	if warn != nil {
+		return f.handleAlert(req, warn, http.StatusUnprocessableEntity)
 	}
-
-	return tmpByte, http.StatusOK
+	return body, http.StatusOK
 }
 
 /*
 Params:
 
-	?id=2
-	&
-	?name=Burger
-	&
-	?type=Vegetarian
-	&
-	?category=Fastfood
-	&
-	?totalPrice=10.25
+	?id=2              # Идентификатор блюда (по умолчанию: просмотр всех блюд)
+	?category=Fastfood # Категория блюда (пример: Fastfood)
+	?name=Burger       # Название блюда (пример: Burger)
+	?totalPrice=10.25  # Стоимость блюда (пример: 10.25)
+	?type=Vegetarian   # Тип блюда (пример: Vegetarian)
 
-	default - view all food
-	todo    - set up pagination
+Default behavior: View all available foods.
+Todo: Set up pagination.
 */
 func (f *FoodServ) Read(req *http.Request) ([]byte, int) {
 	tmpStore := make([]m.Food, 0, 10) // tmpStore
@@ -86,57 +106,45 @@ func (f *FoodServ) Read(req *http.Request) ([]byte, int) {
 	}
 
 	// Serialization
-	tmpByte, err := json.Marshal(tmpStore)
+	tmpByte, err := f.exEncoder.Serialization(tmpStore)
 	if err != nil {
-		tmpErr := m.NewAlert("error", http.StatusBadRequest, err.Error(), req.URL.Path)
-		return tmpErr.PreparBody(req), http.StatusBadRequest
+		return f.handleAlert(req, err, http.StatusBadRequest)
 	}
-
 	return tmpByte, http.StatusOK
 }
 
 func (f *FoodServ) Update(req *http.Request) ([]byte, int) {
 	// Read Body
-	tmpByte, err := io.ReadAll(req.Body)
-
-	// Check error
+	body, err := f.exFuncer.ReadRequestBody(req)
 	if err != nil {
-		tmpErr := m.NewAlert("error", http.StatusBadRequest, err.Error(), req.URL.Path)
-		return tmpErr.PreparBody(req), http.StatusBadRequest
+		return f.handleAlert(req, err, http.StatusBadRequest)
 	}
 
 	// Deserialization to map
-	var forUpFood map[string]any
-	err = json.Unmarshal(tmpByte, &forUpFood)
-
+	var foodForUpdate map[string]any
+	err = f.exEncoder.Deserialization(body, &foodForUpdate)
 	if err != nil {
-		tmpErr := m.NewAlert("error", http.StatusBadRequest, err.Error(), req.URL.Path)
-		return tmpErr.PreparBody(req), http.StatusBadRequest
+		return f.handleAlert(req, err, http.StatusBadRequest)
 	}
 
 	// Check that is ID, like 'Name'
-	tmpId, ok := forUpFood[ID]
-	id, ok2 := tmpId.(string)
-
-	if !ok || !ok2 {
-		tmpErr := m.NewAlert("error", http.StatusBadRequest, badBodyErr.Error(), req.URL.Path)
-		return tmpErr.PreparBody(req), http.StatusBadRequest
+	id, err := f.getFoodID(foodForUpdate)
+	if err != nil {
+		return f.handleAlert(req, err, http.StatusBadRequest)
 	}
 
-	newFood, war := f.dBer.ChangeFood(id, forUpFood)
-	if war != "" {
-		tmpWar := m.NewAlert("warning", http.StatusBadRequest, string(war), req.URL.Path)
-		return tmpWar.PreparBody(req), http.StatusBadRequest
+	// Give updating newFood into db
+	updatedFood, warn := f.dBer.UpdateFood(id, foodForUpdate)
+	if warn != nil {
+		return f.handleAlert(req, warn, http.StatusBadRequest)
 	}
 
 	// Serialization
-	tmpByte2, err := json.Marshal(newFood)
+	tmpByte, err := f.exEncoder.Serialization(updatedFood)
 	if err != nil {
-		tmpErr := m.NewAlert("error", http.StatusBadRequest, err.Error(), req.URL.Path)
-		return tmpErr.PreparBody(req), http.StatusBadRequest
+		return f.handleAlert(req, err, http.StatusBadRequest)
 	}
-
-	return tmpByte2, http.StatusOK
+	return tmpByte, http.StatusOK
 }
 
 func (f *FoodServ) Delete(req *http.Request) ([]byte, int) {

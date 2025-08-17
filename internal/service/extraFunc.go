@@ -2,7 +2,9 @@ package service
 
 import (
 	"fmt"
+	"io"
 	m "mealmate/internal/model"
+	"net/http"
 	"net/url"
 	"os"
 	"reflect"
@@ -11,6 +13,7 @@ import (
 )
 
 type ExFuncer interface {
+	ReadRequestBody(*http.Request) ([]byte, error)
 	NeedShow(m.Fooder, url.Values) bool
 }
 
@@ -96,4 +99,12 @@ func (ex *ExtraFunc) NeedShow(food m.Fooder, queryParams url.Values) bool {
 		}
 	}
 	return true
+}
+
+func (ex *ExtraFunc) ReadRequestBody(req *http.Request) ([]byte, error) {
+	body, err := io.ReadAll(req.Body)
+	if err != nil {
+		return nil, err
+	}
+	return body, nil
 }

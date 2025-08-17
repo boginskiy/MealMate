@@ -2,6 +2,7 @@ package db
 
 import (
 	m "mealmate/internal/model"
+	w "mealmate/internal/warnings"
 	"mealmate/pkg"
 	"strings"
 	"sync"
@@ -9,10 +10,10 @@ import (
 
 // Interface
 type DBFooder interface {
-	ChangeFood(string, map[string]any) (m.Food, warning)
-	TakeFood(string) (m.Food, warning)
+	UpdateFood(string, map[string]any) (m.Food, w.Warning)
+	TakeFood(string) (m.Food, w.Warning)
 	TakeFoodStore() map[string]*m.Food
-	PutFood(*m.Food) warning
+	PutFood(*m.Food) w.Warning
 }
 
 type DB struct {
@@ -43,24 +44,24 @@ func (d *DB) TakeFoodStore() map[string]*m.Food {
 	return d.FoodStore
 }
 
-func (d *DB) PutFood(f *m.Food) warning {
+func (d *DB) PutFood(f *m.Food) w.Warning {
 	// Формируем ключ Food
 	key := strings.TrimSpace(f.Name)
 
 	// Check for inic
 	isUnic := d.checkForUnic(key)
 	if !isUnic {
-		return unicFoodWarn
+		return notUnicFoodWarn
 	}
 
 	// Делаем новую запись с Food
 	d.mu.Lock()
 	d.FoodStore[key] = f
 	d.mu.Unlock()
-	return ""
+	return nil
 }
 
-func (d *DB) TakeFood(id string) (m.Food, warning) {
+func (d *DB) TakeFood(id string) (m.Food, w.Warning) {
 	d.muR.RLock()
 	defer d.muR.RUnlock()
 
@@ -68,10 +69,10 @@ func (d *DB) TakeFood(id string) (m.Food, warning) {
 	if !ok {
 		return m.Food{}, notFoundFoodWarn
 	}
-	return *takingFood, ""
+	return *takingFood, nil
 }
 
-func (d *DB) ChangeFood(id string, forUpData map[string]any) (m.Food, warning) {
+func (d *DB) UpdateFood(id string, forUpData map[string]any) (m.Food, w.Warning) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
@@ -80,5 +81,5 @@ func (d *DB) ChangeFood(id string, forUpData map[string]any) (m.Food, warning) {
 		return m.Food{}, notFoundFoodWarn
 	}
 	takingFood = d.exReflecter.CrossUpdateStructs(takingFood, forUpData).(*m.Food)
-	return *takingFood, ""
+	return *takingFood, nil
 }
