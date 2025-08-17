@@ -8,13 +8,13 @@ import (
 	"time"
 )
 
-type Errorer interface {
+type Alerter interface {
 	ToMarshal() ([]byte, error)
 	ToString() (string, error)
 	PreparBody(*http.Request) []byte
 }
 
-type ErrorWarn struct {
+type Alert struct {
 	Alert     string
 	Code      int
 	Message   string
@@ -22,8 +22,8 @@ type ErrorWarn struct {
 	Timestamp time.Time
 }
 
-func NewErrorWarn(alert string, code int, mess string, path string) *ErrorWarn {
-	return &ErrorWarn{
+func NewAlert(alert string, code int, mess string, path string) *Alert {
+	return &Alert{
 		Alert:     alert,
 		Code:      code,
 		Message:   mess,
@@ -32,16 +32,16 @@ func NewErrorWarn(alert string, code int, mess string, path string) *ErrorWarn {
 	}
 }
 
-func (e *ErrorWarn) ToString() (string, error) {
+func (e *Alert) ToString() (string, error) {
 	slByte, err := json.Marshal(e)
 	return string(slByte), err
 }
 
-func (e *ErrorWarn) ToMarshal() ([]byte, error) {
+func (e *Alert) ToMarshal() ([]byte, error) {
 	return json.Marshal(e)
 }
 
-func (e *ErrorWarn) PreparBody(req *http.Request) []byte {
+func (e *Alert) PreparBody(req *http.Request) []byte {
 	tmpBody, err := e.ToMarshal()
 
 	if err != nil {

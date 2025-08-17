@@ -12,23 +12,21 @@ import (
 func Router() *chi.Mux {
 	r := chi.NewRouter()
 
-	// Handler for Food
 	exReflect := pkg.NewExtraReflect()
+	exEncode := pkg.NewExtraEncode()
 	db := db.NewDB(exReflect)
 
-	foodS := s.NewFoodServ(exReflect, db)
+	foodS := s.NewFoodServ(exReflect, exEncode, db)
 	foodH := h.NewFoodHandler(foodS)
 
 	r.Route("/", func(r chi.Router) {
 
 		r.Route("/food/", func(r chi.Router) {
-			// r.Delete("/", food.Delete)
+			r.MethodNotAllowed(foodH.ServeHTTP)
+			r.Delete("/", foodH.Delete)
 			r.Patch("/", foodH.Update)
 			r.Post("/", foodH.Create)
 			r.Get("/", foodH.Read)
-
-			// TODO! Заглушка Для любых http - методов, которых нет
-			// r.Handle("/", food)
 		})
 	})
 
