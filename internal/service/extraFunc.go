@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	m "mealmate/internal/model"
+	"mealmate/pkg"
 	"net/http"
 	"net/url"
 	"os"
@@ -12,17 +13,12 @@ import (
 	"strings"
 )
 
-type ExFuncer interface {
-	ReadRequestBody(*http.Request) ([]byte, error)
-	TakeIDFromPath(*http.Request, string) string
-	NeedShow(m.Fooder, url.Values) bool
-}
-
 type ExtraFunc struct {
+	exEncoder pkg.ExEncoder
 }
 
-func NewExtraFunc() *ExtraFunc {
-	return &ExtraFunc{}
+func NewExtraFunc(exencd pkg.ExEncoder) *ExtraFunc {
+	return &ExtraFunc{exEncoder: exencd}
 }
 
 func (ex *ExtraFunc) queryParamsGoToLower(params url.Values) url.Values {
@@ -110,15 +106,45 @@ func (ex *ExtraFunc) ReadRequestBody(req *http.Request) ([]byte, error) {
 	return body, nil
 }
 
-func (ex *ExtraFunc) TakeIDFromPath(req *http.Request, id string) string {
+func (f *ExtraFunc) GetFoodID(deserializedFood map[string]any, id string) (string, error) {
+	value, ok := deserializedFood[id]
+	if !ok {
+		return "", notIdFieldErr
+	}
+	valueStr, ok := value.(string)
+	if !ok {
+		return "", notValidIdErr
+	}
+	return valueStr, nil
+}
+
+func (ex *ExtraFunc) TakeIDFromPath(req *http.Request, id string) (string, error) {
 	queryParams := req.URL.Query()
 	// Go to lower key for good compare continue ...
 	queryParams = ex.queryParamsGoToLower(queryParams)
-
 	name := queryParams.Get(strings.ToLower(id))
 	if name == "" {
-		fmt.Fprintf(os.Stdout, "%v\n", notIdFromPathInfo)
-		return ""
+		return "", notIdFieldErr
 	}
-	return name
+	return name, nil
+}
+
+func (ex *ExtraFunc) TakeIDFromBody(req *http.Request, id string) (string, error) {
+	body, err := ex.ReadRequestBody(req)
+	if err != nil {
+		return "", err
+	}
+
+	var foodForDelete map[string]any
+	err = ex.exEncoder.Deserialization(body, &foodForDelete)
+	if err != nil {
+		return "", err
+	}
+
+	// Check that is ID, like 'Name'
+	value, err := ex.GetFoodID(foodForDelete, id)
+	if err != nil {
+		return "", err
+	}
+	return value, nil
 }

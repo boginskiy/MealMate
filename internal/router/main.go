@@ -1,6 +1,7 @@
 package router
 
 import (
+	a "mealmate/internal/alerts"
 	db "mealmate/internal/db"
 	h "mealmate/internal/handler"
 	s "mealmate/internal/service"
@@ -15,8 +16,9 @@ func Router() *chi.Mux {
 	exReflect := pkg.NewExtraReflect()
 	exEncode := pkg.NewExtraEncode()
 	db := db.NewDB(exReflect)
+	alert := a.NewAlert()
 
-	foodS := s.NewFoodServ(exReflect, exEncode, db)
+	foodS := s.NewFoodServ(exReflect, exEncode, alert, db)
 	foodH := h.NewFoodHandler(foodS)
 
 	r.Route("/", func(r chi.Router) {

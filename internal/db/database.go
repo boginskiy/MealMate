@@ -1,11 +1,14 @@
 package db
 
 import (
+	w "mealmate/internal/alerts/warnings"
 	m "mealmate/internal/model"
-	w "mealmate/internal/warnings"
 	"mealmate/pkg"
 	"strings"
 	"sync"
+
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 // Interface
@@ -86,6 +89,10 @@ func (d *DB) UpdateFood(id string, forUpData map[string]any) (m.Food, w.Warning)
 }
 
 func (d *DB) DeleteFood(id string) (m.Food, w.Warning) {
+	// TODO. Временно так
+	titleCase := cases.Title(language.Russian)
+	id = titleCase.String(id)
+
 	d.mu.Lock()
 	defer d.mu.Unlock()
 

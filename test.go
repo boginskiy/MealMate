@@ -1,5 +1,8 @@
 package main
 
+// TODO
+// Тесты надо
+
 import (
 	"fmt"
 	"reflect"
