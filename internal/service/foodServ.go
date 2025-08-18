@@ -15,17 +15,17 @@ type FoodServ struct {
 	exEncoder   pkg.ExEncoder
 	exFuncer    ExFuncer
 	alerter     a.Alerter
-	dBer        db.DBFooder
+	repo        db.Repository
 }
 
-func NewFoodServ(exR pkg.ExReflecter, exE pkg.ExEncoder, a a.Alerter, db db.DBFooder) *FoodServ {
+func NewFoodServ(exR pkg.ExReflecter, exE pkg.ExEncoder, a a.Alerter, r db.Repository) *FoodServ {
 	exF := NewExtraFunc(exE)
 	return &FoodServ{
 		exReflecter: exR,
 		exEncoder:   exE,
 		exFuncer:    exF,
 		alerter:     a,
-		dBer:        db}
+		repo:        r}
 }
 
 func (f *FoodServ) Create(req *http.Request) ([]byte, int) {
@@ -36,14 +36,14 @@ func (f *FoodServ) Create(req *http.Request) ([]byte, int) {
 	}
 
 	// Deserialization
-	newFood := m.NewFood()
+	newFood := m.NewFoodModel()
 	err = f.exEncoder.Deserialization(body, newFood)
 	if err != nil {
 		return f.alerter.HandleAlert(req, err, http.StatusBadRequest)
 	}
 
 	// Write in DB
-	warn := f.dBer.PutFood(newFood)
+	warn := f.repo.PutRecord(newFood)
 	if warn != nil {
 		return f.alerter.HandleAlert(req, warn, http.StatusUnprocessableEntity)
 	}
@@ -63,10 +63,10 @@ Default behavior: View all available foods.
 Todo: Set up pagination.
 */
 func (f *FoodServ) Read(req *http.Request) ([]byte, int) {
-	tmpStore := make([]m.Food, 0, 10) // tmpStore
-	queryParams := req.URL.Query()    // Params of URL
+	tmpStore := make([]m.FoodModel, 0, 10) // tmpStore
+	queryParams := req.URL.Query()         // Params of URL
 
-	for _, food := range f.dBer.TakeFoodStore() {
+	for _, food := range f.repo.TakeAllStore() {
 		// Filter about queryParams
 		if ok := f.exFuncer.NeedShow(*food, queryParams); ok {
 			tmpStore = append(tmpStore, *food)
@@ -96,13 +96,13 @@ func (f *FoodServ) Update(req *http.Request) ([]byte, int) {
 	}
 
 	// Check that is ID, like 'Name'
-	id, err := f.exFuncer.GetFoodID(foodForUpdate, ID)
+	id, err := f.exFuncer.GetModelerID(foodForUpdate, ID)
 	if err != nil {
 		return f.alerter.HandleAlert(req, err, http.StatusBadRequest)
 	}
 
 	// Give updating newFood into db
-	updatedFood, warn := f.dBer.UpdateFood(id, foodForUpdate)
+	updatedFood, warn := f.repo.UpdateRecord(id, foodForUpdate)
 	if warn != nil {
 		return f.alerter.HandleAlert(req, warn, http.StatusBadRequest)
 	}
@@ -128,7 +128,7 @@ func (f *FoodServ) Delete(req *http.Request) ([]byte, int) {
 	}
 
 	// Delete Food into db
-	deletedFood, warn := f.dBer.DeleteFood(nameFood)
+	deletedFood, warn := f.repo.DeleteRecord(nameFood)
 	if warn != nil {
 		return f.alerter.HandleAlert(req, warn, http.StatusBadRequest)
 	}

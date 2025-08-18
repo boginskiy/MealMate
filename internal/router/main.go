@@ -13,10 +13,15 @@ import (
 func Router() *chi.Mux {
 	r := chi.NewRouter()
 
+	// pkg
 	exReflect := pkg.NewExtraReflect()
 	exEncode := pkg.NewExtraEncode()
-	db := db.NewDB(exReflect)
+
+	// alerts
 	alert := a.NewAlert()
+
+	// Food
+	db := db.NewFoodRepo(exReflect)
 
 	foodS := s.NewFoodServ(exReflect, exEncode, alert, db)
 	foodH := h.NewFoodHandler(foodS)
