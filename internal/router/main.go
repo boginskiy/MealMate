@@ -1,9 +1,11 @@
 package router
 
 import (
+	a "mealmate/internal/alerts"
 	db "mealmate/internal/db"
 	h "mealmate/internal/handler"
 	s "mealmate/internal/service"
+	"mealmate/pkg"
 
 	"github.com/go-chi/chi"
 )
@@ -11,21 +13,22 @@ import (
 func Router() *chi.Mux {
 	r := chi.NewRouter()
 
-	// Handler for Food
-	dB := db.NewDB()
-	foodS := s.NewFoodServ(dB)
+	exReflect := pkg.NewExtraReflect()
+	exEncode := pkg.NewExtraEncode()
+	db := db.NewDB(exReflect)
+	alert := a.NewAlert()
+
+	foodS := s.NewFoodServ(exReflect, exEncode, alert, db)
 	foodH := h.NewFoodHandler(foodS)
 
 	r.Route("/", func(r chi.Router) {
 
 		r.Route("/food/", func(r chi.Router) {
-			// r.Delete("/", food.Delete)
-			// r.Patch("/", food.Update)
+			r.MethodNotAllowed(foodH.ServeHTTP)
+			r.Delete("/", foodH.Delete)
+			r.Patch("/", foodH.Update)
 			r.Post("/", foodH.Create)
-			// r.Get("/", food.Read)
-
-			// TODO! Заглушка Для любых http - методов, которых нет
-			// r.Handle("/", food)
+			r.Get("/", foodH.Read)
 		})
 	})
 
