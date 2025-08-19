@@ -25,9 +25,14 @@ func Router() *chi.Mux {
 	foodRepos := db.NewRep(exReflect, foodStore)
 
 	foodS := s.NewFoodServ(exReflect, exEncode, alert, foodRepos)
-	foodH := h.NewFoodHandler(foodS)
+	foodH := h.NewMealHandler(foodS)
 
 	// Ingredient Service
+	// ingredStore := db.NewIngredStore()
+	// ingredRepos := db.NewRep(exReflect, ingredStore)
+
+	ingredS := s.NewIngredServ()
+	ingredH := h.NewMealHandler(ingredS)
 
 	r.Route("/", func(r chi.Router) {
 
@@ -37,6 +42,14 @@ func Router() *chi.Mux {
 			r.Patch("/", foodH.Update)
 			r.Post("/", foodH.Create)
 			r.Get("/", foodH.Read)
+		})
+
+		r.Route("/ingred/", func(r chi.Router) {
+			r.MethodNotAllowed(foodH.ServeHTTP)
+			r.Delete("/", ingredH.Delete)
+			r.Patch("/", ingredH.Update)
+			r.Post("/", ingredH.Create)
+			r.Get("/", ingredH.Read)
 		})
 	})
 
