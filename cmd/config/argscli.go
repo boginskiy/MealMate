@@ -17,6 +17,6 @@ func NewArgsCLI() *ArgsCLI {
 }
 
 func (a *ArgsCLI) ParseFlags() {
-	flag.StringVar(&a.Port, "p", "localhost:8080", "Start adress for application")
+	flag.StringVar(&a.Port, "port", "localhost:8080", "Start adress for application")
 	flag.Parse()
 }

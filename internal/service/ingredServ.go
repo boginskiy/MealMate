@@ -33,14 +33,19 @@ func (i *IngredServ) Create(req *http.Request) ([]byte, int) {
 	newIngred := m.NewIngredModel()
 
 	// Буфер
-	var outBuf bytes.Buffer
+	var tmpBody bytes.Buffer
 
-	io.Copy(&newIngred, req.Body)
+	io.Copy(&tmpBody, req.Body)
+
+	tmpBody.Bytes()
 
 	json.Unmarshal(req.Body, &newIngred)
 
 	return []byte{}, 0
 }
+
+// TODO !
+// Создание метода Общего метода Create для разных моделей. ПОра переходить на интерфейсы !
 
 func (i *IngredServ) Update(req *http.Request) ([]byte, int) {
 	return []byte{}, 0
