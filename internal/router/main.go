@@ -20,11 +20,14 @@ func Router() *chi.Mux {
 	// alerts
 	alert := a.NewAlert()
 
-	// Food
-	db := db.NewFoodRepo(exReflect)
+	// Food Service
+	foodStore := db.NewFoodStore()
+	foodRepos := db.NewRep(exReflect, foodStore)
 
-	foodS := s.NewFoodServ(exReflect, exEncode, alert, db)
+	foodS := s.NewFoodServ(exReflect, exEncode, alert, foodRepos)
 	foodH := h.NewFoodHandler(foodS)
+
+	// Ingredient Service
 
 	r.Route("/", func(r chi.Router) {
 

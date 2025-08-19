@@ -3,23 +3,24 @@ package db
 import m "mealmate/internal/model"
 
 type IngredStore struct {
-	Store map[string]*m.IngredModel // view table Ingredient
+	// view table for Ingredient
+	Store map[string]*m.IngredModel
 }
 
 func NewIngredStore() *IngredStore {
 	return &IngredStore{make(map[string]*m.IngredModel, 5)}
 }
 
-func (i *IngredStore) getEmptyRecord() m.IngredModel {
+func (i *IngredStore) getEmptyRecord() m.Modeler {
 	return m.IngredModel{}
 }
 
-func (i *IngredStore) getRecord(id string) (*m.IngredModel, bool) {
+func (i *IngredStore) getRecord(id string) (m.Modeler, bool) {
 	value, ok := i.Store[id]
 	return value, ok
 }
 
-func (i *IngredStore) getStore() map[string]*m.IngredModel {
+func (i *IngredStore) getStore() any {
 	return i.Store
 }
 

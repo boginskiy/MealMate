@@ -5,26 +5,20 @@ import (
 	m "mealmate/internal/model"
 )
 
-type FStorer interface {
-	getRecord(string) (*m.FoodModel, bool)
+// interface для взаимодействия слоев "Репозитория" с "Таблицами BD"
+type Storer interface {
+	getRecord(string) (m.Modeler, bool)
 	setRecord(string, m.Modeler) bool
-	getStore() map[string]*m.FoodModel
-	getEmptyRecord() m.FoodModel
+	getEmptyRecord() m.Modeler
 	deleteRecord(string)
+	getStore() any
 }
 
-type IStorer interface {
-	getRecord(string) (*m.IngredModel, bool)
-	setRecord(string, *m.IngredModel) bool
-	getStore() map[string]*m.IngredModel
-	getEmptyRecord() m.IngredModel
-	deleteRecord(string)
-}
-
+// interface для взаимодействия слоев "Бизнес Логики" с "Репозиторием"
 type Repository interface {
 	UpdateRecord(string, map[string]any) (m.Modeler, w.Warning)
 	DeleteRecord(string) (m.Modeler, w.Warning)
 	TakeRecord(string) (m.Modeler, w.Warning)
-	TakeAllStore() map[string]*m.FoodModel // Вынести отдельн ?
 	PutRecord(m.Modeler) w.Warning
+	TakeAllStore() any
 }
